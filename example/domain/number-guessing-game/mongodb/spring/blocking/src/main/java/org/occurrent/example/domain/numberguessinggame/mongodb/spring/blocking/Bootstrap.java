@@ -18,14 +18,14 @@ package org.occurrent.example.domain.numberguessinggame.mongodb.spring.blocking;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.occurrent.eventstore.mongodb.spring.blocking.EventStoreConfig;
-import org.occurrent.eventstore.mongodb.spring.blocking.SpringBlockingMongoEventStore;
+import org.occurrent.eventstore.mongodb.spring.blocking.SpringMongoEventStore;
 import org.occurrent.example.domain.numberguessinggame.mongodb.spring.blocking.infrastructure.Serialization;
 import org.occurrent.mongodb.timerepresentation.TimeRepresentation;
-import org.occurrent.subscription.api.blocking.BlockingSubscriptionPositionStorage;
-import org.occurrent.subscription.api.blocking.PositionAwareBlockingSubscription;
-import org.occurrent.subscription.mongodb.spring.blocking.SpringBlockingSubscriptionForMongoDB;
-import org.occurrent.subscription.mongodb.spring.blocking.SpringBlockingSubscriptionPositionStorageForMongoDB;
-import org.occurrent.subscription.util.blocking.BlockingSubscriptionWithAutomaticPositionPersistence;
+import org.occurrent.subscription.api.blocking.PositionAwareSubscriptionModel;
+import org.occurrent.subscription.api.blocking.SubscriptionPositionStorage;
+import org.occurrent.subscription.blocking.durable.DurableSubscriptionModel;
+import org.occurrent.subscription.mongodb.spring.blocking.SpringMongoSubscriptionModel;
+import org.occurrent.subscription.mongodb.spring.blocking.SpringMongoSubscriptionPositionStorage;
 import org.springframework.amqp.core.TopicExchange;
 import org.springframework.amqp.rabbit.annotation.EnableRabbit;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
@@ -62,24 +62,24 @@ public class Bootstrap {
     }
 
     @Bean
-    public SpringBlockingMongoEventStore eventStore(MongoTemplate template, MongoTransactionManager transactionManager) {
+    public SpringMongoEventStore eventStore(MongoTemplate template, MongoTransactionManager transactionManager) {
         EventStoreConfig eventStoreConfig = new EventStoreConfig.Builder().eventStoreCollectionName(EVENTS_COLLECTION_NAME).transactionConfig(transactionManager).timeRepresentation(TimeRepresentation.DATE).build();
-        return new SpringBlockingMongoEventStore(template, eventStoreConfig);
+        return new SpringMongoEventStore(template, eventStoreConfig);
     }
 
     @Bean
-    public PositionAwareBlockingSubscription subscription(MongoTemplate mongoTemplate) {
-        return new SpringBlockingSubscriptionForMongoDB(mongoTemplate, EVENTS_COLLECTION_NAME, TimeRepresentation.DATE);
+    public PositionAwareSubscriptionModel positionAwareSubscriptionModel(MongoTemplate mongoTemplate) {
+        return new SpringMongoSubscriptionModel(mongoTemplate, EVENTS_COLLECTION_NAME, TimeRepresentation.DATE);
     }
 
     @Bean
-    public BlockingSubscriptionPositionStorage storage(MongoTemplate mongoTemplate) {
-        return new SpringBlockingSubscriptionPositionStorageForMongoDB(mongoTemplate, "subscriptions");
+    public SubscriptionPositionStorage storage(MongoTemplate mongoTemplate) {
+        return new SpringMongoSubscriptionPositionStorage(mongoTemplate, "subscriptions");
     }
 
     @Bean
-    public BlockingSubscriptionWithAutomaticPositionPersistence subscriptionWithAutomaticPersistence(PositionAwareBlockingSubscription subscription, BlockingSubscriptionPositionStorage storage) {
-        return new BlockingSubscriptionWithAutomaticPositionPersistence(subscription, storage);
+    public DurableSubscriptionModel durableSubscriptionModel(PositionAwareSubscriptionModel subscription, SubscriptionPositionStorage storage) {
+        return new DurableSubscriptionModel(subscription, storage);
     }
 
     @Bean

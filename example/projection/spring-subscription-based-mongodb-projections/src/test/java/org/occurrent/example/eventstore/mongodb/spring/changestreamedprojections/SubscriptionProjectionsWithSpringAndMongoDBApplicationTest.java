@@ -16,7 +16,6 @@
 
 package org.occurrent.example.eventstore.mongodb.spring.changestreamedprojections;
 
-import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 import org.occurrent.example.eventstore.mongodb.spring.subscriptionprojections.CurrentName;
 import org.occurrent.example.eventstore.mongodb.spring.subscriptionprojections.CurrentNameProjection;
@@ -28,15 +27,17 @@ import org.testcontainers.containers.MongoDBContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
-import static org.hamcrest.Matchers.not;
 
+@SuppressWarnings("ResultOfMethodCallIgnored")
 @SpringBootTest(classes = SubscriptionProjectionsWithSpringAndMongoDBApplication.class)
 @Testcontainers
 public class SubscriptionProjectionsWithSpringAndMongoDBApplicationTest {
@@ -67,7 +68,24 @@ public class SubscriptionProjectionsWithSpringAndMongoDBApplicationTest {
         nameApplicationService.defineName(id, now, "John Doe");
 
         // Then
-        CurrentName currentName = await().until(() -> currentNameProjection.findById(id.toString()).orElse(null), not(Matchers.nullValue()));
-        assertThat(currentName.getName()).isEqualTo("John Doe");
+        await().atMost(Duration.ofMillis(2000L)).untilAsserted(() ->
+                assertThat(currentNameProjection.findById(id.toString())).hasValueSatisfying(cn -> Objects.equals(cn.getName(), "John Doe"))
+        );
+    }
+
+    @Test
+    void current_name_projection_is_updated_asynchronously_after_multiple_events_are_written_to_the_same_stream() {
+        // Given
+        LocalDateTime now = LocalDateTime.now();
+        UUID id = UUID.randomUUID();
+
+        // When
+        nameApplicationService.defineName(id, now, "Jane Doe");
+        nameApplicationService.changeName(id, now, "John Doe");
+
+        // Then
+        await().atMost(Duration.ofMillis(2000L)).untilAsserted(() ->
+                assertThat(currentNameProjection.findById(id.toString())).hasValueSatisfying(cn -> Objects.equals(cn.getName(), "John Doe"))
+        );
     }
 }

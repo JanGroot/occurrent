@@ -22,7 +22,7 @@
     <groupId>org.occurrent</groupId>
     <artifactId>occurrent</artifactId>
     <packaging>pom</packaging>
-    <version>0.1.1-SNAPSHOT</version>
+    <version>0.9.1-SNAPSHOT</version>
     <modules>
         <module>test-support</module>
         <module>example</module>
@@ -30,6 +30,8 @@
         <module>subscription</module>
         <module>cloudevents-extension</module>
         <module>common</module>
+        <module>application</module>
+        <module>dsl</module>
     </modules>
 
     <name>Occurrent</name>
@@ -65,14 +67,16 @@
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
         <junit.version>5.6.2</junit.version>
-        <test-containers.version>1.14.3</test-containers.version>
-        <kotlin.version>1.3.72</kotlin.version>
+        <test-containers.version>1.15.2</test-containers.version>
+        <kotlin.version>1.4.31</kotlin.version>
         <jackson.version>2.11.1</jackson.version>
-        <cloudevents.version>2.0.0-milestone2</cloudevents.version>
-        <reactor.version>3.3.7.RELEASE</reactor.version>
-        <spring-data-mongodb.version>3.0.1.RELEASE</spring-data-mongodb.version>
-        <spring-boot.version>2.3.3.RELEASE</spring-boot.version>
-        <mongo.version>4.0.4</mongo.version>
+        <cloudevents.version>2.0.0</cloudevents.version>
+        <reactor.version>3.4.2</reactor.version>
+        <spring-data-mongodb.version>3.1.1</spring-data-mongodb.version>
+        <spring-boot.version>2.4.2</spring-boot.version>
+        <mongo.version>4.1.1</mongo.version>
+        <dokka.version>1.4.10.2</dokka.version>
+        <awaitility.version>4.0.3</awaitility.version>
     </properties>
 
 
@@ -104,14 +108,14 @@
                 <version>${jackson.version}</version>
             </dependency>
             <dependency>
+                <groupId>com.fasterxml.jackson.module</groupId>
+                <artifactId>jackson-module-kotlin</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-api</artifactId>
                 <version>1.7.30</version>
-            </dependency>
-            <dependency>
-                <groupId>org.jetbrains.kotlin</groupId>
-                <artifactId>kotlin-stdlib-jdk8</artifactId>
-                <version>${kotlin.version}</version>
             </dependency>
             <dependency>
                 <groupId>io.javalin</groupId>
@@ -133,6 +137,11 @@
                 <artifactId>amqp-client</artifactId>
                 <version>5.9.0</version>
             </dependency>
+            <dependency>
+                <groupId>jakarta.annotation</groupId>
+                <artifactId>jakarta.annotation-api</artifactId>
+                <version>1.3.5</version>
+            </dependency>
             <!-- Spring -->
             <dependency>
                 <groupId>org.springframework.boot</groupId>
@@ -146,8 +155,18 @@
             </dependency>
             <dependency>
                 <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-data-redis</artifactId>
+                <version>${spring-boot.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-starter-web</artifactId>
                 <version>${spring-boot.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework</groupId>
+                <artifactId>spring-aspects</artifactId>
+                <version>5.2.9.RELEASE</version>
             </dependency>
             <dependency>
                 <groupId>org.springframework.boot</groupId>
@@ -155,21 +174,44 @@
                 <version>${spring-boot.version}</version>
             </dependency>
             <dependency>
-                <groupId>jakarta.annotation</groupId>
-                <artifactId>jakarta.annotation-api</artifactId>
-                <version>1.3.5</version>
+                <groupId>org.springframework.retry</groupId>
+                <artifactId>spring-retry</artifactId>
+                <version>1.3.0</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.springframework</groupId>
+                        <artifactId>spring-core</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+
+            <!-- Kotlin -->
+            <dependency>
+                <groupId>org.jetbrains.kotlin</groupId>
+                <artifactId>kotlin-stdlib-jdk8</artifactId>
+                <version>${kotlin.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.jetbrains.kotlin</groupId>
+                <artifactId>kotlin-reflect</artifactId>
+                <version>${kotlin.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.jetbrains.kotlinx</groupId>
+                <artifactId>kotlinx-collections-immutable-jvm</artifactId>
+                <version>0.3.2</version>
             </dependency>
 
             <!-- Redis -->
             <dependency>
                 <groupId>org.springframework.data</groupId>
                 <artifactId>spring-data-redis</artifactId>
-                <version>2.3.3.RELEASE</version>
+                <version>${spring-boot.version}</version>
             </dependency>
             <dependency>
                 <groupId>io.lettuce</groupId>
                 <artifactId>lettuce-core</artifactId>
-                <version>5.3.3.RELEASE</version>
+                <version>6.0.1.RELEASE</version>
             </dependency>
             <!-- Mongo -->
             <dependency>
@@ -203,7 +245,6 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-starter-test</artifactId>
                 <version>${spring-boot.version}</version>
-                <scope>test</scope>
                 <exclusions>
                     <exclusion>
                         <groupId>org.junit.vintage</groupId>
@@ -257,14 +298,14 @@
                 <version>0.10.3</version>
             </dependency>
             <dependency>
-                <groupId>org.jetbrains.kotlinx</groupId>
-                <artifactId>kotlinx-collections-immutable-jvm</artifactId>
-                <version>0.3.2</version>
+                <groupId>org.awaitility</groupId>
+                <artifactId>awaitility</artifactId>
+                <version>${awaitility.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.awaitility</groupId>
-                <artifactId>awaitility</artifactId>
-                <version>4.0.3</version>
+                <artifactId>awaitility-kotlin</artifactId>
+                <version>${awaitility.version}</version>
             </dependency>
             <dependency>
                 <groupId>net.jqwik</groupId>
@@ -275,6 +316,11 @@
                 <groupId>io.github.artsok</groupId>
                 <artifactId>rerunner-jupiter</artifactId>
                 <version>2.1.6</version>
+            </dependency>
+            <dependency>
+                <groupId>org.mockito</groupId>
+                <artifactId>mockito-core</artifactId>
+                <version>3.7.7</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -289,6 +335,15 @@
             <url>https://jcenter.bintray.com/</url>
         </repository>
     </repositories>
+
+    <pluginRepositories>
+        <!-- Required by dokka -->
+        <pluginRepository>
+            <id>jcenter</id>
+            <name>JCenter</name>
+            <url>https://jcenter.bintray.com/</url>
+        </pluginRepository>
+    </pluginRepositories>
 
     <build>
         <pluginManagement><!-- lock down plugins versions to avoid using Maven defaults (may be moved to parent pom) -->
@@ -333,9 +388,84 @@
                     <version>3.0.0</version>
                 </plugin>
                 <plugin>
+                    <!-- See https://github.com/Kotlin/dokka#using-the-maven-plugin for more examples-->
+                    <groupId>org.jetbrains.dokka</groupId>
+                    <artifactId>dokka-maven-plugin</artifactId>
+                    <version>${dokka.version}</version>
+                    <executions>
+                        <execution>
+                            <phase>prepare-package</phase>
+                            <goals>
+                                <goal>dokka</goal>
+                                <goal>javadoc</goal>
+                                <goal>javadocJar</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                    <configuration>
+                        <dokkaPlugins>
+                            <plugin>
+                                <groupId>org.jetbrains.dokka</groupId>
+                                <artifactId>kotlin-as-java-plugin</artifactId>
+                                <version>${dokka.version}</version>
+                            </plugin>
+                        </dokkaPlugins>
+                    </configuration>
+                </plugin>
+                <plugin>
                     <groupId>org.jetbrains.kotlin</groupId>
                     <artifactId>kotlin-maven-plugin</artifactId>
                     <version>${kotlin.version}</version>
+                    <executions>
+                        <execution>
+                            <id>compile</id>
+                            <phase>compile</phase>
+                            <goals>
+                                <goal>compile</goal>
+                            </goals>
+                            <configuration>
+                                <sourceDirs>
+                                    <source>src/main/kotlin</source>
+                                    <source>src/main/resources</source>
+                                </sourceDirs>
+                            </configuration>
+                        </execution>
+                        <execution>
+                            <id>test-compile</id>
+                            <phase>test-compile</phase>
+                            <goals>
+                                <goal>test-compile</goal>
+                            </goals>
+                            <configuration>
+                                <sourceDirs>
+                                    <source>src/test/kotlin</source>
+                                    <source>src/test/resources</source>
+                                </sourceDirs>
+                            </configuration>
+                        </execution>
+                    </executions>
+                    <configuration>
+                        <args>
+                            <arg>-Xjsr305=strict</arg>
+                        </args>
+                        <compilerPlugins>
+                            <plugin>spring</plugin>
+                            <plugin>all-open</plugin>
+                        </compilerPlugins>
+                        <jvmTarget>1.8</jvmTarget>
+                    </configuration>
+                    <dependencies>
+                        <dependency>
+                            <groupId>org.jetbrains.kotlin</groupId>
+                            <artifactId>kotlin-maven-allopen</artifactId>
+                            <version>${kotlin.version}</version>
+                        </dependency>
+                    </dependencies>
+                </plugin>
+                <plugin>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-maven-plugin</artifactId>
+                    <version>${spring-boot.version}</version>
                 </plugin>
             </plugins>
         </pluginManagement>
@@ -346,6 +476,7 @@
             <id>release</id>
             <!-- Don't include test-support and example modules-->
             <modules>
+                <module>application</module>
                 <module>eventstore</module>
                 <module>subscription</module>
                 <module>cloudevents-extension</module>
@@ -403,8 +534,11 @@
                         <extensions>true</extensions>
                         <configuration>
                             <serverId>sonatype-nexus-staging</serverId>
-                            <nexusUrl>https://oss.sonatype.org/</nexusUrl>
+                            <nexusUrl>https://s01.oss.sonatype.org</nexusUrl>
                             <autoReleaseAfterClose>true</autoReleaseAfterClose>
+                            <!-- If sonatype fails when "close staging repository", which happens frequently,
+                                 keep the staging repo so that we can retry from the UI. -->
+                            <keepStagingRepositoryOnCloseRuleFailure>true</keepStagingRepositoryOnCloseRuleFailure>
                         </configuration>
                     </plugin>
                 </plugins>
@@ -415,11 +549,11 @@
     <distributionManagement>
         <snapshotRepository>
             <id>sonatype-nexus-snapshots</id>
-            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+            <url>https://s01.oss.sonatype.org/content/repositories/snapshots</url>
         </snapshotRepository>
         <repository>
             <id>sonatype-nexus-staging</id>
-            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+            <url>https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/</url>
         </repository>
     </distributionManagement>
 </project>

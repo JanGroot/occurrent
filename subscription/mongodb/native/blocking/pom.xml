@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  ~ Copyright 2020 Johan Haleby
+  ~ Copyright 2021 Johan Haleby
   ~
   ~ Licensed under the Apache License, Version 2.0 (the "License");
   ~ you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@
     <parent>
         <artifactId>subscription-mongodb-native</artifactId>
         <groupId>org.occurrent</groupId>
-        <version>0.1.1-SNAPSHOT</version>
+        <version>0.9.1-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -35,34 +35,39 @@
             <artifactId>mongodb-driver-core</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.cloudevents</groupId>
-            <artifactId>cloudevents-json-jackson</artifactId>
-        </dependency>
-        <dependency>
             <groupId>org.occurrent</groupId>
-            <artifactId>subscription-mongodb-common</artifactId>
-            <version>0.1.1-SNAPSHOT</version>
+            <artifactId>subscription-mongodb-base</artifactId>
+            <version>0.9.1-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.occurrent</groupId>
             <artifactId>subscription-api-blocking</artifactId>
-            <version>0.1.1-SNAPSHOT</version>
+            <version>0.9.1-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.occurrent</groupId>
             <artifactId>mongodb-native-filter-bsonfilter-conversion</artifactId>
-            <version>0.1.1-SNAPSHOT</version>
+            <version>0.9.1-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>org.occurrent</groupId>
+            <artifactId>retry</artifactId>
+            <version>0.9.1-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
         </dependency>
-        
+        <dependency>
+            <groupId>jakarta.annotation</groupId>
+            <artifactId>jakarta.annotation-api</artifactId>
+        </dependency>
+
         <!-- Test -->
         <dependency>
             <groupId>org.occurrent</groupId>
             <artifactId>eventstore-mongodb-native</artifactId>
-            <version>0.1.1-SNAPSHOT</version>
+            <version>0.9.1-SNAPSHOT</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -103,7 +108,7 @@
         <dependency>
             <groupId>org.occurrent</groupId>
             <artifactId>test-support</artifactId>
-            <version>0.1.1-SNAPSHOT</version>
+            <version>0.9.1-SNAPSHOT</version>
             <scope>test</scope>
         </dependency>
         <dependency>

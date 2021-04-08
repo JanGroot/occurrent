@@ -17,6 +17,7 @@
 package org.occurrent.filter;
 
 import io.cloudevents.SpecVersion;
+import io.cloudevents.core.v1.CloudEventV1;
 import org.occurrent.cloudevents.OccurrentCloudEventExtension;
 import org.occurrent.condition.Condition;
 
@@ -45,6 +46,7 @@ public abstract class Filter {
     public static final String SUBJECT = "subject";
     public static final String DATA_SCHEMA = "dataschema";
     public static final String DATA_CONTENT_TYPE = "datacontenttype";
+    public static final String DATA = "data";
 
     private Filter() {
     }
@@ -246,6 +248,11 @@ public abstract class Filter {
 
     public static Filter specVersion(Condition<String> condition) {
         return filter(SPEC_VERSION, condition);
+    }
+
+    public static <T> Filter data(String name, Condition<T> condition) {
+        requireNonNull(name, "Data name cannot be null");
+        return filter(DATA + "." + name, condition);
     }
 
     /**

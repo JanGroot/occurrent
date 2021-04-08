@@ -16,11 +16,10 @@
 
 package org.occurrent.example.eventstore.mongodb.spring.subscriptionprojections;
 
-import io.cloudevents.CloudEvent;
 import org.occurrent.domain.DomainEvent;
 import org.occurrent.domain.NameDefined;
 import org.occurrent.domain.NameWasChanged;
-import org.occurrent.subscription.api.blocking.BlockingSubscription;
+import org.occurrent.subscription.api.blocking.SubscriptionModel;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
@@ -29,15 +28,16 @@ import java.time.Duration;
 import static io.vavr.API.*;
 import static io.vavr.Predicates.instanceOf;
 import static java.time.temporal.ChronoUnit.SECONDS;
+import static org.occurrent.cloudevents.OccurrentExtensionGetter.getStreamId;
 
 @Component
 public class CurrentNameProjectionUpdater {
 
-    private final BlockingSubscription<CloudEvent> subscription;
+    private final SubscriptionModel subscription;
     private final CurrentNameProjection currentNameProjection;
     private final DeserializeCloudEventToDomainEvent deserializeCloudEventToDomainEvent;
 
-    public CurrentNameProjectionUpdater(BlockingSubscription<CloudEvent> subscription,
+    public CurrentNameProjectionUpdater(SubscriptionModel subscription,
                                         CurrentNameProjection currentNameProjection,
                                         DeserializeCloudEventToDomainEvent deserializeCloudEventToDomainEvent) {
         this.subscription = subscription;
@@ -50,10 +50,10 @@ public class CurrentNameProjectionUpdater {
         subscription
                 .subscribe("current-name", cloudEvent -> {
                     DomainEvent domainEvent = deserializeCloudEventToDomainEvent.deserialize(cloudEvent);
-                    String eventId = cloudEvent.getId();
+                    String streamId = getStreamId(cloudEvent);
                     CurrentName currentName = Match(domainEvent).of(
-                            Case($(instanceOf(NameDefined.class)), e -> new CurrentName(eventId, e.getName())),
-                            Case($(instanceOf(NameWasChanged.class)), e -> new CurrentName(eventId, e.getName())));
+                            Case($(instanceOf(NameDefined.class)), e -> new CurrentName(streamId, e.getName())),
+                            Case($(instanceOf(NameWasChanged.class)), e -> new CurrentName(streamId, e.getName())));
                     currentNameProjection.save(currentName);
                 })
                 .waitUntilStarted(Duration.of(2, SECONDS));

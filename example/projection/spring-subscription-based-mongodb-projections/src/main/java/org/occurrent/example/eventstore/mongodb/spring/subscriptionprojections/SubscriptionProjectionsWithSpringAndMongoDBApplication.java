@@ -17,19 +17,18 @@
 package org.occurrent.example.eventstore.mongodb.spring.subscriptionprojections;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.cloudevents.CloudEvent;
 import org.occurrent.eventstore.api.blocking.EventStore;
 import org.occurrent.eventstore.mongodb.spring.blocking.EventStoreConfig;
-import org.occurrent.eventstore.mongodb.spring.blocking.SpringBlockingMongoEventStore;
+import org.occurrent.eventstore.mongodb.spring.blocking.SpringMongoEventStore;
 import org.occurrent.mongodb.timerepresentation.TimeRepresentation;
-import org.occurrent.subscription.api.blocking.BlockingSubscription;
-import org.occurrent.subscription.api.blocking.BlockingSubscriptionPositionStorage;
-import org.occurrent.subscription.api.blocking.PositionAwareBlockingSubscription;
-import org.occurrent.subscription.mongodb.spring.blocking.SpringBlockingSubscriptionForMongoDB;
-import org.occurrent.subscription.mongodb.spring.blocking.SpringBlockingSubscriptionPositionStorageForMongoDB;
-import org.occurrent.subscription.util.blocking.BlockingSubscriptionWithAutomaticPositionPersistence;
+import org.occurrent.subscription.api.blocking.PositionAwareSubscriptionModel;
+import org.occurrent.subscription.api.blocking.SubscriptionPositionStorage;
+import org.occurrent.subscription.blocking.durable.DurableSubscriptionModel;
+import org.occurrent.subscription.mongodb.spring.blocking.SpringMongoSubscriptionModel;
+import org.occurrent.subscription.mongodb.spring.blocking.SpringMongoSubscriptionPositionStorage;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
 import org.springframework.data.mongodb.MongoDatabaseFactory;
 import org.springframework.data.mongodb.MongoTransactionManager;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -52,22 +51,23 @@ public class SubscriptionProjectionsWithSpringAndMongoDBApplication {
     @Bean
     public EventStore eventStore(MongoTemplate mongoTemplate, MongoTransactionManager transactionManager) {
         EventStoreConfig eventStoreConfig = new EventStoreConfig.Builder().eventStoreCollectionName(EVENTS_COLLECTION).transactionConfig(transactionManager).timeRepresentation(TimeRepresentation.RFC_3339_STRING).build();
-        return new SpringBlockingMongoEventStore(mongoTemplate, eventStoreConfig);
+        return new SpringMongoEventStore(mongoTemplate, eventStoreConfig);
     }
 
     @Bean
-    public PositionAwareBlockingSubscription positionAwareBlockingSubscription(MongoTemplate mongoTemplate) {
-        return new SpringBlockingSubscriptionForMongoDB(mongoTemplate, EVENTS_COLLECTION, TimeRepresentation.RFC_3339_STRING);
+    public PositionAwareSubscriptionModel positionAwareSubscriptionModel(MongoTemplate mongoTemplate) {
+        return new SpringMongoSubscriptionModel(mongoTemplate, EVENTS_COLLECTION, TimeRepresentation.RFC_3339_STRING);
     }
 
     @Bean
-    public BlockingSubscriptionPositionStorage storage(MongoTemplate mongoTemplate) {
-        return new SpringBlockingSubscriptionPositionStorageForMongoDB(mongoTemplate, "subscriptions");
+    public SubscriptionPositionStorage storage(MongoTemplate mongoTemplate) {
+        return new SpringMongoSubscriptionPositionStorage(mongoTemplate, "subscriptions");
     }
 
+    @Primary
     @Bean
-    public BlockingSubscription<CloudEvent> blockingSubscriptionWithAutomaticPositionPersistence(PositionAwareBlockingSubscription subscription, BlockingSubscriptionPositionStorage storage) {
-        return new BlockingSubscriptionWithAutomaticPositionPersistence(subscription, storage);
+    public PositionAwareSubscriptionModel autoPersistingSubscriptionModel(PositionAwareSubscriptionModel subscription, SubscriptionPositionStorage storage) {
+        return new DurableSubscriptionModel(subscription, storage);
     }
 
     @Bean

@@ -19,7 +19,7 @@
     <parent>
         <artifactId>mongodb</artifactId>
         <groupId>org.occurrent</groupId>
-        <version>0.1.1-SNAPSHOT</version>
+        <version>0.9.1-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -27,21 +27,10 @@
 
 
     <dependencies>
-        <!-- Test -->
         <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-engine</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-params</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.assertj</groupId>
-            <artifactId>assertj-core</artifactId>
-            <scope>test</scope>
+            <groupId>org.occurrent</groupId>
+            <artifactId>time</artifactId>
+            <version>0.9.1-SNAPSHOT</version>
         </dependency>
     </dependencies>
 </project>

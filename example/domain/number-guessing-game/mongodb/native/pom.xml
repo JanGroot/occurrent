@@ -19,28 +19,32 @@
     <parent>
         <artifactId>example-number-guessing-game-es-mongodb</artifactId>
         <groupId>org.occurrent</groupId>
-        <version>0.1.1-SNAPSHOT</version>
+        <version>0.9.1-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>example-number-guessing-game-es-mongodb-native</artifactId>
 
-
     <dependencies>
         <dependency>
             <groupId>org.occurrent</groupId>
             <artifactId>example-number-guessing-game-model</artifactId>
-            <version>0.1.1-SNAPSHOT</version>
+            <version>0.9.1-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.occurrent</groupId>
             <artifactId>eventstore-mongodb-native</artifactId>
-            <version>0.1.1-SNAPSHOT</version>
+            <version>0.9.1-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.occurrent</groupId>
             <artifactId>subscription-mongodb-native-blocking-position-storage</artifactId>
-            <version>0.1.1-SNAPSHOT</version>
+            <version>0.9.1-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>org.occurrent</groupId>
+            <artifactId>durable-subscription</artifactId>
+            <version>0.9.1-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>com.rabbitmq</groupId>
@@ -57,6 +61,10 @@
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
         </dependency>
     </dependencies>
 

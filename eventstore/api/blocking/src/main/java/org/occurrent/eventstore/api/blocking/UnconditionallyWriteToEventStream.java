@@ -28,7 +28,7 @@ public interface UnconditionallyWriteToEventStream {
      * Write {@code events} to a stream
      *
      * @param streamId The stream id of the stream to write to
-     * @param events The events to write
+     * @param events   The events to write
      */
     void write(String streamId, Stream<CloudEvent> events);
 }

@@ -20,37 +20,81 @@ import io.cloudevents.CloudEvent;
 import io.cloudevents.SpecVersion;
 import io.cloudevents.core.builder.CloudEventBuilder;
 import org.occurrent.cloudevents.OccurrentCloudEventExtension;
+import org.occurrent.cloudevents.OccurrentExtensionGetter;
 import org.occurrent.eventstore.api.LongConditionEvaluator;
+import org.occurrent.eventstore.api.SortBy;
+import org.occurrent.eventstore.api.SortBy.MultipleSortStepsImpl;
+import org.occurrent.eventstore.api.SortBy.NaturalImpl;
+import org.occurrent.eventstore.api.SortBy.SingleFieldImpl;
+import org.occurrent.eventstore.api.SortBy.SortDirection;
 import org.occurrent.eventstore.api.WriteCondition;
 import org.occurrent.eventstore.api.WriteCondition.StreamVersionWriteCondition;
 import org.occurrent.eventstore.api.WriteConditionNotFulfilledException;
 import org.occurrent.eventstore.api.blocking.EventStore;
 import org.occurrent.eventstore.api.blocking.EventStoreOperations;
+import org.occurrent.eventstore.api.blocking.EventStoreQueries;
 import org.occurrent.eventstore.api.blocking.EventStream;
-import org.occurrent.eventstore.api.internal.functional.FunctionalSupport.Pair;
+import org.occurrent.filter.Filter;
+import org.occurrent.functionalsupport.internal.FunctionalSupport.Pair;
 
 import java.net.URI;
 import java.util.*;
 import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
+import static io.cloudevents.core.v1.CloudEventV1.*;
+import static java.util.Comparator.comparing;
 import static java.util.Objects.requireNonNull;
+import static java.util.Spliterators.spliteratorUnknownSize;
+import static org.occurrent.cloudevents.OccurrentCloudEventExtension.STREAM_ID;
 import static org.occurrent.cloudevents.OccurrentCloudEventExtension.STREAM_VERSION;
-import static org.occurrent.eventstore.api.internal.functional.FunctionalSupport.zip;
+import static org.occurrent.eventstore.api.SortBy.SortDirection.ASCENDING;
+import static org.occurrent.eventstore.api.SortBy.SortDirection.DESCENDING;
+import static org.occurrent.functionalsupport.internal.FunctionalSupport.not;
+import static org.occurrent.functionalsupport.internal.FunctionalSupport.zip;
+import static org.occurrent.inmemory.filtermatching.FilterMatcher.matchesFilter;
 
 /**
  * This is an {@link EventStore} that stores events in-memory. This is mainly useful for testing
  * and/or demo purposes. It also supports the {@link EventStoreOperations} contract.
  */
-public class InMemoryEventStore implements EventStore, EventStoreOperations {
+public class InMemoryEventStore implements EventStore, EventStoreOperations, EventStoreQueries {
 
-    private final ConcurrentMap<String, List<CloudEvent>> state = new ConcurrentHashMap<>();
+    // We cannot use ConcurrentMap since it doesn't maintain insertion order
+    private final Map<String, List<CloudEvent>> state = Collections.synchronizedMap(new LinkedHashMap<>());
+
+    private final Consumer<Stream<CloudEvent>> listener;
+
+    /**
+     * Create an instance of {@link InMemoryEventStore}
+     */
+    public InMemoryEventStore() {
+        // @formatter:off
+        this(__ -> {});
+        // @formatter:on
+    }
+
+    /**
+     * Create an instance of {@link InMemoryEventStore} that has a <code>listener</code> that will be invoked
+     * after events have been written to the event store. This is typically not something you should implement
+     * yourself, it's mainly here to allow the in-memory repository to work with "subscriptions". See the
+     * in-memory subscription model implementation.
+     *
+     * @param listener A listener that will be invoked after events have been written to the datastore (synchronously!)
+     */
+    public InMemoryEventStore(Consumer<Stream<CloudEvent>> listener) {
+        if (listener == null) {
+            throw new IllegalArgumentException("listener cannot be null");
+        }
+        this.listener = listener;
+    }
 
     @Override
     public EventStream<CloudEvent> read(String streamId, int skip, int limit) {
@@ -68,19 +112,29 @@ public class InMemoryEventStore implements EventStore, EventStoreOperations {
         requireTrue(writeCondition != null, WriteCondition.class.getSimpleName() + " cannot be null");
         Stream<CloudEvent> cloudEventStream = events.peek(e -> requireTrue(e.getSpecVersion() == SpecVersion.V1, "Spec version needs to be " + SpecVersion.V1));
 
+        final AtomicReference<List<CloudEvent>> newCloudEvents = new AtomicReference<>();
         state.compute(streamId, (__, currentEvents) -> {
             long currentStreamVersion = calculateStreamVersion(currentEvents);
 
             if (currentEvents == null && isConditionFulfilledBy(writeCondition, 0)) {
-                return applyOccurrentCloudEventExtension(cloudEventStream, streamId, 0);
+                List<CloudEvent> cloudEvents = applyOccurrentCloudEventExtension(cloudEventStream, streamId, 0);
+                newCloudEvents.set(cloudEvents);
+                return cloudEvents;
             } else if (currentEvents != null && isConditionFulfilledBy(writeCondition, currentStreamVersion)) {
-                List<CloudEvent> newEvents = new ArrayList<>(currentEvents);
-                newEvents.addAll(applyOccurrentCloudEventExtension(cloudEventStream, streamId, currentStreamVersion));
-                return newEvents;
+                List<CloudEvent> eventList = new ArrayList<>(currentEvents);
+                List<CloudEvent> newEvents = applyOccurrentCloudEventExtension(cloudEventStream, streamId, currentStreamVersion);
+                newCloudEvents.set(newEvents);
+                eventList.addAll(newEvents);
+                return eventList;
             } else {
                 throw new WriteConditionNotFulfilledException(streamId, currentStreamVersion, writeCondition, String.format("%s was not fulfilled. Expected version %s but was %s.", WriteCondition.class.getSimpleName(), writeCondition.toString(), currentStreamVersion));
             }
         });
+
+        List<CloudEvent> addedEvents = newCloudEvents.get();
+        if (addedEvents != null && !addedEvents.isEmpty()) {
+            listener.accept(addedEvents.stream());
+        }
     }
 
     private static List<CloudEvent> applyOccurrentCloudEventExtension(Stream<CloudEvent> events, String streamId, long streamVersion) {
@@ -114,6 +168,7 @@ public class InMemoryEventStore implements EventStore, EventStoreOperations {
 
     @Override
     public void deleteEventStream(String streamId) {
+        requireNonNull(streamId, "StreamId cannot be null");
         state.remove(streamId);
     }
 
@@ -136,6 +191,12 @@ public class InMemoryEventStore implements EventStore, EventStoreOperations {
     }
 
     @Override
+    public void delete(Filter filter) {
+        requireNonNull(filter, "Filter cannot be null");
+        state.replaceAll((streamId, cloudEvents) -> cloudEvents.stream().filter(not(cloudEvent -> matchesFilter(cloudEvent, filter))).collect(Collectors.toList()));
+    }
+
+    @Override
     public Optional<CloudEvent> updateEvent(String cloudEventId, URI cloudEventSource, Function<CloudEvent, CloudEvent> updateFunction) {
         requireNonNull(updateFunction, "Update function cannot be null");
 
@@ -154,6 +215,64 @@ public class InMemoryEventStore implements EventStore, EventStoreOperations {
                             }
                         }).collect(Collectors.toList())))
                 .flatMap(events -> events.stream().filter(cloudEventPredicate).findFirst());
+    }
+
+    @Override
+    public Stream<CloudEvent> query(Filter filter, int skip, int limit, SortBy sortBy) {
+        Objects.requireNonNull(filter, Filter.class.getSimpleName() + " cannot be null");
+        Objects.requireNonNull(sortBy, SortBy.class.getSimpleName() + " cannot be null");
+
+        Stream<CloudEvent> stream;
+        synchronized (state) {
+            stream = state.values().stream().flatMap(List::stream).filter(cloudEvent -> matchesFilter(cloudEvent, filter));
+        }
+
+        final Stream<CloudEvent> streamToSort;
+        final Map<CloudEvent, Integer> cloudEventPositionCache;
+        if (sortBy instanceof NaturalImpl) {
+            SortDirection order = ((NaturalImpl) sortBy).direction;
+            if (order == ASCENDING) {
+                return stream.skip(skip).limit(limit);
+            } else {
+                Iterator<CloudEvent> cloudEventIterator = stream.collect(Collectors.toCollection(LinkedList::new)).descendingIterator();
+                return StreamSupport.stream(spliteratorUnknownSize(cloudEventIterator, Spliterator.ORDERED), false).skip(skip).limit(limit);
+            }
+        } else if (isMultipleSortStepsContainingNaturalOrder(sortBy)) {
+            cloudEventPositionCache = stream.collect(LinkedHashMap::new, (cache, event) -> cache.put(event, cache.size()), LinkedHashMap::putAll);
+            streamToSort = cloudEventPositionCache.keySet().stream();
+        } else {
+            streamToSort = stream;
+            cloudEventPositionCache = Collections.emptyMap();
+        }
+
+        Comparator<CloudEvent> comparator = toComparator(cloudEventPositionCache, sortBy);
+        final Stream<CloudEvent> streamToUse;
+        if (comparator == null) {
+            streamToUse = streamToSort;
+        } else {
+            streamToUse = streamToSort.sorted(comparator);
+        }
+
+        return streamToUse.skip(skip).limit(limit);
+    }
+
+    private static boolean isMultipleSortStepsContainingNaturalOrder(SortBy sortBy) {
+        if (sortBy instanceof MultipleSortStepsImpl) {
+            return ((MultipleSortStepsImpl) sortBy).steps.stream().anyMatch(NaturalImpl.class::isInstance);
+        }
+        return false;
+    }
+
+    @Override
+    public long count(Filter filter) {
+        synchronized (state) {
+            return state.values().stream().mapToLong(cloudEvents -> cloudEvents.stream().filter(cloudEvent -> matchesFilter(cloudEvent, filter)).count()).reduce(0, Long::sum);
+        }
+    }
+
+    @Override
+    public boolean exists(Filter filter) {
+        return count(filter) > 0;
     }
 
     private static class EventStreamImpl implements EventStream<CloudEvent> {
@@ -236,5 +355,73 @@ public class InMemoryEventStore implements EventStore, EventStoreOperations {
             return 0;
         }
         return (long) events.get(events.size() - 1).getExtension(STREAM_VERSION);
+    }
+
+    private static Comparator<CloudEvent> toComparator(Map<CloudEvent, Integer> cloudEventPositionCache, SortBy sortBy) {
+        final Comparator<CloudEvent> comparator;
+        if (sortBy instanceof NaturalImpl) {
+            Comparator<CloudEvent> temp = Comparator.comparingInt(cloudEventPositionCache::get);
+            if (((NaturalImpl) sortBy).direction == DESCENDING) {
+                comparator = temp.reversed();
+            } else {
+                comparator = temp;
+            }
+        } else if (sortBy instanceof SingleFieldImpl) {
+            comparator = toComparator((SingleFieldImpl) sortBy);
+        } else if (sortBy instanceof MultipleSortStepsImpl) {
+            comparator = ((MultipleSortStepsImpl) sortBy).steps.stream()
+                    .map(step -> toComparator(cloudEventPositionCache, step))
+                    .filter(Objects::nonNull)
+                    .reduce(Comparator::thenComparing)
+                    .orElse(null);
+        } else {
+            throw new IllegalStateException("Internal error: Unrecognized \"sort by\" " + sortBy);
+        }
+        return comparator;
+    }
+
+    private static Comparator<CloudEvent> toComparator(SingleFieldImpl singleField) {
+        String fieldName = singleField.fieldName;
+        final Comparator<CloudEvent> comparator;
+        switch (fieldName) {
+            case TIME:
+                comparator = comparing(CloudEvent::getTime);
+                break;
+            case STREAM_VERSION:
+                comparator = comparing(OccurrentExtensionGetter::getStreamVersion);
+                break;
+            case STREAM_ID:
+                comparator = comparing(OccurrentExtensionGetter::getStreamId);
+                break;
+            case ID:
+                comparator = comparing(CloudEvent::getId);
+                break;
+            case SOURCE:
+                comparator = comparing(CloudEvent::getSource);
+                break;
+            case SUBJECT:
+                comparator = comparing(CloudEvent::getSubject);
+                break;
+            case TYPE:
+                comparator = comparing(CloudEvent::getType);
+                break;
+            case SPECVERSION:
+                comparator = comparing(CloudEvent::getSpecVersion);
+                break;
+            case DATACONTENTTYPE:
+                comparator = comparing(CloudEvent::getDataContentType);
+                break;
+            case DATASCHEMA:
+                comparator = comparing(CloudEvent::getDataSchema);
+                break;
+            default:
+                throw new IllegalStateException("Unexpected value: " + fieldName);
+        }
+
+        if (singleField.direction == ASCENDING) {
+            return comparator;
+        } else {
+            return comparator.reversed();
+        }
     }
 }

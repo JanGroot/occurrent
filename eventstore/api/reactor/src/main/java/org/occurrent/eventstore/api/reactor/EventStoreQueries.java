@@ -17,10 +17,13 @@
 package org.occurrent.eventstore.api.reactor;
 
 import io.cloudevents.CloudEvent;
+import org.occurrent.eventstore.api.SortBy;
 import org.occurrent.filter.Filter;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import static java.util.Objects.requireNonNull;
+import static org.occurrent.eventstore.api.SortBy.SortDirection.ASCENDING;
 
 /**
  * Additional querying capabilities that may be supported by an {@link EventStore} implementation that is not typically part of a
@@ -37,6 +40,29 @@ public interface EventStoreQueries {
     Flux<CloudEvent> query(Filter filter, int skip, int limit, SortBy sortBy);
 
     /**
+     * Count specific events in the event store that matches the supplied {@code filter}.
+     *
+     * @return The number of events in the event store matching the {@code filter}.
+     */
+    Mono<Long> count(Filter filter);
+
+    /**
+     * Count all events in the event store
+     *
+     * @return The number of events in the event store
+     */
+    default Mono<Long> count() {
+        return count(Filter.all());
+    }
+
+    /**
+     * Check if any events exists that matches the given {@code filter}.
+     *
+     * @return <code>true</code> if any events exists that are matching the {@code filter}, <code>fase</code> otherwise.
+     */
+    Mono<Boolean> exists(Filter filter);
+
+    /**
      * @return All cloud events matching the specified filter sorted by <code>sortBy</code>.
      */
     default Flux<CloudEvent> query(Filter filter, SortBy sortBy) {
@@ -47,7 +73,7 @@ public interface EventStoreQueries {
      * @return All cloud events matching the specified filter
      */
     default Flux<CloudEvent> query(Filter filter, int skip, int limit) {
-        return query(filter, skip, limit, SortBy.NATURAL_ASC);
+        return query(filter, skip, limit, SortBy.natural(ASCENDING));
     }
 
     /**
@@ -86,9 +112,5 @@ public interface EventStoreQueries {
     default Flux<CloudEvent> query(Filter filter) {
         requireNonNull(filter, "Filter cannot be null");
         return query(filter, 0, Integer.MAX_VALUE);
-    }
-
-    enum SortBy {
-        TIME_ASC, TIME_DESC, NATURAL_ASC, NATURAL_DESC
     }
 }

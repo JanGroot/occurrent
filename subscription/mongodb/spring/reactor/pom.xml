@@ -19,7 +19,7 @@
     <parent>
         <artifactId>subscription-mongodb-spring</artifactId>
         <groupId>org.occurrent</groupId>
-        <version>0.1.1-SNAPSHOT</version>
+        <version>0.9.1-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -27,26 +27,14 @@
 
     <dependencies>
         <dependency>
-            <groupId>io.cloudevents</groupId>
-            <artifactId>cloudevents-json-jackson</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-        </dependency>
-        <dependency>
             <groupId>org.occurrent</groupId>
             <artifactId>subscription-api-reactor</artifactId>
-            <version>0.1.1-SNAPSHOT</version>
+            <version>0.9.1-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.occurrent</groupId>
             <artifactId>subscription-mongodb-spring-common</artifactId>
-            <version>0.1.1-SNAPSHOT</version>
+            <version>0.9.1-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.mongodb</groupId>
@@ -58,15 +46,15 @@
         </dependency>
         <dependency>
             <groupId>org.occurrent</groupId>
-            <artifactId>subscription-mongodb-common</artifactId>
-            <version>0.1.1-SNAPSHOT</version>
+            <artifactId>subscription-mongodb-base</artifactId>
+            <version>0.9.1-SNAPSHOT</version>
         </dependency>
 
         <!-- Test -->
         <dependency>
             <groupId>org.occurrent</groupId>
             <artifactId>eventstore-mongodb-spring-reactor</artifactId>
-            <version>0.1.1-SNAPSHOT</version>
+            <version>0.9.1-SNAPSHOT</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -112,7 +100,7 @@
         <dependency>
             <groupId>org.occurrent</groupId>
             <artifactId>test-support</artifactId>
-            <version>0.1.1-SNAPSHOT</version>
+            <version>0.9.1-SNAPSHOT</version>
             <scope>test</scope>
         </dependency>
         <dependency>
